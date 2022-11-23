@@ -1,0 +1,8 @@
+{
+  "name": "learn-vulkan",
+  "version-string": "learn",
+  "dependencies": [
+    "glm",
+    "glfw3"
+  ]
+}
