@@ -3,6 +3,7 @@
   "version-string": "learn",
   "dependencies": [
     "glm",
-    "glfw3"
+    "glfw3",
+    "stb"
   ]
 }
