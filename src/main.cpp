@@ -12,6 +12,7 @@
 #include <fstream>
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -19,6 +20,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 static std::vector<char> readFile(const std::string& filename)
 {
@@ -42,6 +46,9 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
+const std::string MODEL_PATH = "models/head.obj";
+const std::string TEXTURE_PATH = "textures/head.tga";
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -100,23 +107,6 @@ struct Vertex
 
 		return attributeDescriptions;
 	}
-};
-
-const std::vector<Vertex> vertecies = {
-	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint32_t> indecies = {
-	0, 1, 2, 2, 3, 0,
-	4, 5, 6, 6, 7, 4
 };
 
 struct MVP {
@@ -180,6 +170,26 @@ private:
 	VkImageView depthImageView;
 	VkDeviceMemory depthImageMemory;
 
+	//std::vector<Vertex> vertices;
+	//std::vector<uint32_t> indices;
+
+	const std::vector<Vertex> vertices = {
+	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+	{{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+
+	{{-0.5f, -0.5f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, -0.5f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, 0.5f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+	{{-0.5f, 0.5f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+	};
+
+	const std::vector<uint32_t> indices = {
+		0, 1, 2, 2, 3, 0,
+		4, 5, 6, 6, 7, 4,
+	};
+
 	void initWindow()
 	{
 		glfwInit();
@@ -192,6 +202,8 @@ private:
 
 	void initVulkan()
 	{
+		//loadModel();
+
 		createInstance();
 		createSurface();
 		pickPhysicalDevice();
@@ -334,14 +346,45 @@ private:
 
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
+	/*
+	void loadModel() {
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string warn, err;
 
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+			throw std::runtime_error("Cannot load Model!");
+		}
+
+		for (const auto& shape : shapes) {
+			for (const auto& index : shape.mesh.indices) {
+				Vertex vertex = {};
+
+				vertex.position.x = attrib.vertices[3 * index.vertex_index + 0];
+				vertex.position.y = attrib.vertices[3 * index.vertex_index + 1];
+				vertex.position.z = attrib.vertices[3 * index.vertex_index + 2];
+
+				vertex.texCoord.x = attrib.texcoords[2 * index.texcoord_index + 0];
+				vertex.texCoord.y = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
+
+				vertex.color = { 1.0f, 1.0f, 1.0f };
+
+				vertices.push_back(vertex);
+				indices.push_back(indices.size());
+			}
+		}
+	}
+	*/
 	void createDepthResources()
 	{
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-		imageInfo.extent = { swapChainExtent.width, swapChainExtent.height, 1 };
+		imageInfo.format = findDepthFormat();
+		imageInfo.extent.width = swapChainExtent.width;
+		imageInfo.extent.height = swapChainExtent.height;
+		imageInfo.extent.depth = 1;
 		imageInfo.mipLevels = 1;
 		imageInfo.arrayLayers = 1;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -374,7 +417,7 @@ private:
 		imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		imageViewInfo.image = depthImage;
 		imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageViewInfo.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+		imageViewInfo.format = findDepthFormat();
 		imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 		imageViewInfo.subresourceRange.baseArrayLayer = 0;
 		imageViewInfo.subresourceRange.baseMipLevel = 0;
@@ -384,6 +427,30 @@ private:
 		if (vkCreateImageView(device, &imageViewInfo, nullptr, &depthImageView) != VK_SUCCESS) {
 			throw std::runtime_error("Cannot create Depth Image View!");
 		}
+	}
+
+	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+		for (VkFormat format : candidates) {
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+
+			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+				return format;
+			}
+			else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+				return format;
+			}
+		}
+
+		throw std::runtime_error("failed to find supported format!");
+	}
+
+	VkFormat findDepthFormat() {
+		return findSupportedFormat(
+			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+		);
 	}
 
 	void createTextureSampler()
@@ -511,7 +578,7 @@ private:
 	{
 		int texWidth, texHeight, texChannels;
 
-		stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 		VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -717,8 +784,10 @@ private:
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		MVP mvp = {};
-		mvp.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		mvp.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		mvp.model = glm::mat4(1.0f);
+		mvp.model = glm::rotate(mvp.model, time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mvp.view = glm::mat4(1.0f);
+		mvp.view = glm::translate(mvp.view, glm::vec3(0.0f, 0.0f, -5.0f));
 		mvp.projection = glm::perspective(
 			glm::radians(45.0f),
 			swapChainExtent.width / (float)swapChainExtent.height,
@@ -801,7 +870,7 @@ private:
 	{
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(indecies[0]) * indecies.size();
+		bufferInfo.size = sizeof(indices[0]) * indices.size();
 		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -825,7 +894,7 @@ private:
 
 		void* data;
 		vkMapMemory(device, indexBufferMemory, 0, bufferInfo.size, 0, &data);
-			memcpy(data, indecies.data(), (size_t)bufferInfo.size);
+			memcpy(data, indices.data(), (size_t)bufferInfo.size);
 		vkUnmapMemory(device, indexBufferMemory);
 	}
 
@@ -833,7 +902,7 @@ private:
 	{
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(vertecies[0]) * vertecies.size();
+		bufferInfo.size = sizeof(vertices[0]) * vertices.size();
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -857,7 +926,7 @@ private:
 
 		void* data;
 		vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-			memcpy(data, vertecies.data(), (size_t)bufferInfo.size);
+			memcpy(data, vertices.data(), (size_t)bufferInfo.size);
 		vkUnmapMemory(device, vertexBufferMemory);
 	}
 
@@ -915,10 +984,11 @@ private:
 		renderPassBeginInfo.renderArea.extent = swapChainExtent;
 
 		VkClearValue clearColor = {};
-		clearColor.color = { 0.2f, 0.2, 0.2, 1.0f };
+		clearColor.color = { {0.2f, 0.2, 0.2, 1.0f} };
 
 		VkClearValue clearDepth = {};
-		clearDepth.depthStencil = { 1.0f, 0 };
+		clearDepth.depthStencil.depth = 1.0f;
+		clearDepth.depthStencil.stencil = 0.0f;
 
 		std::array<VkClearValue, 2> clearValues = { clearColor, clearDepth };
 
@@ -959,7 +1029,7 @@ private:
 				nullptr
 			);
 
-			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indecies.size()), 1, 0, 0, 0);
+			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
 
@@ -1039,7 +1109,7 @@ private:
 		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentDescription depthAttachmentDescription = {};
-		depthAttachmentDescription.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+		depthAttachmentDescription.format = findDepthFormat();
 		depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
 		depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1167,7 +1237,7 @@ private:
 		resterizationCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 		resterizationCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		resterizationCreateInfo.lineWidth = 1.0f;
-		resterizationCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		resterizationCreateInfo.cullMode = VK_CULL_MODE_NONE;
 		resterizationCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		resterizationCreateInfo.depthBiasEnable = VK_FALSE;
 		resterizationCreateInfo.depthBiasConstantFactor = 0.0f;
@@ -1193,9 +1263,9 @@ private:
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT
-			| VK_COLOR_COMPONENT_G_BIT
-			| VK_COLOR_COMPONENT_B_BIT
-			| VK_COLOR_COMPONENT_A_BIT;
+											| VK_COLOR_COMPONENT_G_BIT
+											| VK_COLOR_COMPONENT_B_BIT
+											| VK_COLOR_COMPONENT_A_BIT;
 		colorBlendAttachment.blendEnable = VK_FALSE;
 		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
@@ -1242,7 +1312,6 @@ private:
 		graphicsPipelineInfo.renderPass = renderPass;
 		graphicsPipelineInfo.subpass = 0;
 		graphicsPipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		graphicsPipelineInfo.basePipelineIndex = -1;
 
 		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
 			throw std::runtime_error("Cannot create Graphics Pipeline!");
