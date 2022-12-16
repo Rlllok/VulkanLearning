@@ -98,6 +98,10 @@ private:
 	VkImageView depthImageView;
 	VkDeviceMemory depthImageMemory;
 
+	VkImage colorImage;
+	VkImageView colorImageView;
+	VkDeviceMemory colorImageMemory;
+
 	// Window
 	void initWindow(int windowWidth, int windowHeight, const char* windowTitle);
 	void loop();
@@ -111,6 +115,7 @@ private:
 	void createSurface();
 	void createSwapchain();
 	void createSwapchainImageViews();
+	void createColorResources();
 	void createRenderPass();
 	void createDepthResources();
 	void createSwapchainFramebuffers();

@@ -159,8 +159,8 @@ void Texture::createTextureSampler()
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipLodBias = 0.0f;
-	samplerInfo.minLod = static_cast<float>(mipLevels / 2);
-	//samplerInfo.minLod = 0.0f;
+	//samplerInfo.minLod = static_cast<float>(mipLevels / 2);
+	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = static_cast<float>(mipLevels);
 	samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;

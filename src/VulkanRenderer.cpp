@@ -17,6 +17,8 @@
 #include "Shader.h"
 #include "Model.h"
 
+constexpr auto MSSA_SAMPLES = VK_SAMPLE_COUNT_4_BIT;
+
 VulkanRenderer::VulkanRenderer(bool enableValidationLayers)
 {
 	this->enableValidationLayers = enableValidationLayers;
@@ -40,6 +42,7 @@ void VulkanRenderer::initVulkan()
 	createSwapchain();
 	createSwapchainImageViews();
 	createRenderPass();
+	createColorResources();
 	createDepthResources();
 	createSwapchainFramebuffers();
 	createTextureDescriptorSetLayout();
@@ -316,6 +319,68 @@ void VulkanRenderer::createSwapchainImageViews()
 	}
 }
 
+void VulkanRenderer::createColorResources()
+{
+	VkImageCreateInfo imageInfo = {};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.format = swapchainImageFormat;
+	imageInfo.extent.height = swapchainExtent.height;
+	imageInfo.extent.width = swapchainExtent.width;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.samples = MSSA_SAMPLES;
+	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	result = vkCreateImage(device, &imageInfo, nullptr, &colorImage);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("ERROR: cannot create Color Image.");
+	}
+
+	VkMemoryRequirements memRequirements = {};
+	vkGetImageMemoryRequirements(device, colorImage, &memRequirements);
+
+	VkMemoryAllocateInfo allocateInfo = {};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocateInfo.allocationSize = memRequirements.size;
+	allocateInfo.memoryTypeIndex = findMemoryType(
+		device.physicalDevice,
+		memRequirements.memoryTypeBits,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	);
+
+	result = vkAllocateMemory(device, &allocateInfo, nullptr, &colorImageMemory);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("ERROR: cannot allocate Color Image Memory.");
+	}
+
+	vkBindImageMemory(device, colorImage, colorImageMemory, 0);
+
+	VkImageViewCreateInfo imageViewInfo = {};
+	imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewInfo.image = colorImage;
+	imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewInfo.format = swapchainImageFormat;
+	imageViewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+	imageViewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+	imageViewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+	imageViewInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+	imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewInfo.subresourceRange.layerCount = 1;
+	imageViewInfo.subresourceRange.baseArrayLayer = 0;
+	imageViewInfo.subresourceRange.levelCount = 1;
+	imageViewInfo.subresourceRange.baseMipLevel = 0;
+
+	result = vkCreateImageView(device, &imageViewInfo, nullptr, &colorImageView);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("ERROR: cannot create Color Image View.");
+	}
+}
+
 void VulkanRenderer::createDepthResources()
 {
 	VkImageCreateInfo imageInfo = {};
@@ -327,7 +392,7 @@ void VulkanRenderer::createDepthResources()
 	imageInfo.extent.depth = 1;
 	imageInfo.mipLevels = 1;
 	imageInfo.arrayLayers = 1;
-	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.samples = MSSA_SAMPLES;
 	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -392,23 +457,33 @@ void VulkanRenderer::createRenderPass()
 	*/
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format = swapchainImageFormat;
-	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.samples = MSSA_SAMPLES;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
 	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment = {};
 	depthAttachment.format = VK_FORMAT_D32_SFLOAT;
-	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.samples = MSSA_SAMPLES;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription colorAttachmentResolve = {};
+	colorAttachmentResolve.format = swapchainImageFormat;
+	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	VkAttachmentReference colorReference = {};
 	colorReference.attachment = 0;
@@ -418,13 +493,17 @@ void VulkanRenderer::createRenderPass()
 	depthReference.attachment = 1;
 	depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+	VkAttachmentReference colorResolveReference = {};
+	colorResolveReference.attachment = 2;
+	colorResolveReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpassDescription = {};
 	subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpassDescription.inputAttachmentCount = 0;
 	subpassDescription.pInputAttachments = nullptr;
 	subpassDescription.colorAttachmentCount = 1;
 	subpassDescription.pColorAttachments = &colorReference;
-	subpassDescription.pResolveAttachments = nullptr;
+	subpassDescription.pResolveAttachments = &colorResolveReference;
 	subpassDescription.pDepthStencilAttachment = &depthReference;
 	subpassDescription.preserveAttachmentCount = 0;
 	subpassDescription.pPreserveAttachments = nullptr;
@@ -437,7 +516,7 @@ void VulkanRenderer::createRenderPass()
 	subpassDependency.srcAccessMask = 0;
 	subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+	std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -462,9 +541,10 @@ void VulkanRenderer::createSwapchainFramebuffers()
 	swapchainFramebuffer.resize(swapchainImageViews.size());
 
 	for (size_t i = 0; i < swapchainFramebuffer.size(); i++) {
-		std::array<VkImageView, 2> attachments = {
-			swapchainImageViews[i],
-			depthImageView
+		std::array<VkImageView, 3> attachments = {
+			colorImageView,
+			depthImageView,
+			swapchainImageViews[i]
 		};
 
 		VkFramebufferCreateInfo framebufferInfo = {};
@@ -565,7 +645,7 @@ void VulkanRenderer::createGraphicsPipeline()
 	VkPipelineMultisampleStateCreateInfo multisampleInfo = {};
 	multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampleInfo.sampleShadingEnable = VK_FALSE;
-	multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	multisampleInfo.rasterizationSamples = MSSA_SAMPLES;
 
 	// DEPTH STENCIL STATE
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo = {};
@@ -945,6 +1025,10 @@ void VulkanRenderer::cleanup()
 	vkDestroyImageView(device, depthImageView, nullptr);
 	vkFreeMemory(device, depthImageMemory, nullptr);
 	vkDestroyImage(device, depthImage, nullptr);
+
+	vkDestroyImageView(device, colorImageView, nullptr);
+	vkFreeMemory(device, colorImageMemory, nullptr);
+	vkDestroyImage(device, colorImage, nullptr);
 
 	vkFreeMemory(device, mvpBufferMemory, nullptr);
 	vkDestroyBuffer(device, mvpBuffer, nullptr);
