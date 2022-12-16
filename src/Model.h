@@ -72,20 +72,7 @@ private:
 	VkResult result;
 
 	std::vector<Vertex> vertices;
-	/*
-	const std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-	};
-	*/
-	 std::vector<uint32_t> indices;
-	 /*
-	std::vector<uint32_t> indices = {
-		0, 1, 2, 2, 3, 0
-	};
-	*/
+	std::vector<uint32_t> indices;
 
 	void loadModel(const std::string& modelPath);
 	void createVertexBuffer();

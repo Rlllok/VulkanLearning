@@ -27,6 +27,13 @@ VulkanRenderer::VulkanRenderer(bool enableValidationLayers)
 void VulkanRenderer::start(int windowWidth, int windowHeight, const char* windowTitle)
 {
 	initWindow(windowWidth, windowHeight, windowTitle);
+	camera = new Camera(
+		glm::vec3(0.0f, 0.0f, -5.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f),
+		45.0f,
+		windowHeight / float(windowWidth),
+		0.1f
+	);
 	initVulkan();
 	loop();
 	cleanup();
@@ -49,7 +56,7 @@ void VulkanRenderer::initVulkan()
 	createGraphicsPipeline();
 	createCommandPool();
 	createCommandBuffers();
-	createModel("models/room.obj", "textures/room.png");
+	createModel("models/head.obj", "textures/head.tga");
 	createMVPBuffer();
 	createDescriptorPool();
 	createDescriptorSet();
@@ -69,18 +76,72 @@ void VulkanRenderer::initWindow(int windowWidth, int windowHeight, const char* w
 	if (!window) {
 		throw std::runtime_error("ERROR: cannot create Window.");
 	}
+
+	glfwSetWindowUserPointer(window, this);
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouseCallback);
 }
 
 void VulkanRenderer::loop()
 {
+	auto startTime = std::chrono::high_resolution_clock::now();
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+		startTime = std::chrono::high_resolution_clock::now();
+		processInput(deltaTime);
+
 		draw();
 	}
 
 	// Wait while device do nothing ( queues are empty, etc ).
 	// After that we can end loop and proceed to destroing created objects.
 	vkDeviceWaitIdle(device);
+}
+
+void VulkanRenderer::processInput(float deltaTime)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, true);
+	}
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		camera->move(Camera::FORWARD, deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+		camera->move(Camera::BACKWARD, deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+		camera->move(Camera::RIGHT, deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		camera->move(Camera::LEFT, deltaTime);
+	}
+}
+
+void VulkanRenderer::mouseCallback(GLFWwindow* window, double xpos, double ypos)
+{
+	VulkanRenderer* obj = (VulkanRenderer*)glfwGetWindowUserPointer(window);
+
+	static bool firstMouse = true;
+	static float lastX;
+	static float lastY;
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	obj->camera->rotateByMouse(xoffset, yoffset);
 }
 
 void VulkanRenderer::createInstance()
@@ -231,7 +292,10 @@ void VulkanRenderer::createSwapchain()
 
 	VkExtent2D extent = chooseSwapchainExtent(swapchainSupportDetails.capabilities);
 	VkSurfaceFormatKHR surfaceFormat = chooseSwapchainSurfaceFormat(swapchainSupportDetails.surfaceFormats);
-	VkPresentModeKHR presentMode = chooseSwapchainPresentMode(swapchainSupportDetails.presentModes);
+	//VkPresentModeKHR presentMode = chooseSwapchainPresentMode(swapchainSupportDetails.presentModes);
+	
+	// Changed to VK_PRESENT_MODE_FIFO_KHR, because it has no input latency. q
+	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 
 	VkSwapchainCreateInfoKHR swapchainInfo = {};
 	swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -888,10 +952,10 @@ void VulkanRenderer::updateMVPBuffer()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 	
-	mvp.model = glm::rotate(glm::mat4(1.0f), deltaTime * glm::radians(60.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	//mvp.view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-	mvp.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	mvp.projection = glm::perspective(glm::radians(45.0f), swapchainExtent.width / (float)swapchainExtent.height, 0.1f, 10.f);
+	//mvp.model = glm::rotate(glm::mat4(1.0f), deltaTime * glm::radians(60.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	mvp.model = glm::mat4(1.0f);
+	mvp.view = camera->getViewMatrix();
+	mvp.projection = glm::perspective(glm::radians(camera->getFOV()), swapchainExtent.width / (float)swapchainExtent.height, 0.1f, 10.f);
 	mvp.projection[1][1] *= -1;
 
 	memcpy(mvpBufferMapped, &mvp, sizeof(MVP));
@@ -1019,6 +1083,7 @@ void VulkanRenderer::cleanup()
 	/*
 		We have to destroy every object that we created using Vulkan (free memory).
 	*/
+	delete camera;
 	delete texture;
 	delete model;
 

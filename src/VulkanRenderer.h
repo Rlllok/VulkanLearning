@@ -7,6 +7,7 @@
 #include <vector>
 #include <optional>
 
+#include "Camera.h"
 #include "Model.h"
 #include "Texture.h"
 
@@ -35,6 +36,8 @@ public:
 private:
 
 	GLFWwindow* window;
+
+	Camera* camera;
 	
 	Model* model = nullptr;
 	Texture* texture = nullptr;
@@ -105,6 +108,8 @@ private:
 	// Window
 	void initWindow(int windowWidth, int windowHeight, const char* windowTitle);
 	void loop();
+	void processInput(float deltaTime);
+	static void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 
 	// Vulkan
 	void initVulkan();
