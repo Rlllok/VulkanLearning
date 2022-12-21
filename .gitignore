@@ -3,3 +3,11 @@ vcpkg_installed
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+*.sln
+.vs
+
+cmake_install.cmake
+CMakeExample.dir
+CMakeFiles
+CMakeCache.txt
+Debug
