@@ -73,6 +73,10 @@ void Model::loadModel(const std::string& modelPath)
 			vertex.texCoord.x = attrib.texcoords[2 * index.texcoord_index + 0];
 			vertex.texCoord.y = 1 - attrib.texcoords[2 * index.texcoord_index + 1];
 
+			vertex.norm.x = attrib.normals[3 * index.normal_index + 0];
+			vertex.norm.y = attrib.normals[3 * index.normal_index + 1];
+			vertex.norm.z = attrib.normals[3 * index.normal_index + 2];
+
 			vertices.push_back(vertex);
 			indices.push_back(indices.size());
 		}

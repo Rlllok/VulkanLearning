@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Texture.h"
+#include "Light.h"
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation",
@@ -41,6 +42,7 @@ private:
 	
 	Model* model = nullptr;
 	Texture* texture = nullptr;
+	Light* light = nullptr;
 	
 	VkResult result = VK_SUCCESS;
 	bool enableValidationLayers;
@@ -84,7 +86,6 @@ private:
 			return graphicsQueueIndex.has_value()
 				&& presentQueueIndex.has_value();
 		}
-
 	} queues;
 
 	struct MVP {
@@ -124,7 +125,7 @@ private:
 	void createRenderPass();
 	void createDepthResources();
 	void createSwapchainFramebuffers();
-	void createTextureDescriptorSetLayout();
+	void createDescriptorSetLayout();
 	void createDescriptorPool();
 	void createDescriptorSet();
 	void createGraphicsPipeline();

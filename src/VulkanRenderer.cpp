@@ -52,10 +52,18 @@ void VulkanRenderer::initVulkan()
 	createColorResources();
 	createDepthResources();
 	createSwapchainFramebuffers();
-	createTextureDescriptorSetLayout();
+	createDescriptorSetLayout();
 	createGraphicsPipeline();
 	createCommandPool();
 	createCommandBuffers();
+
+	light = new Light(
+		device,
+		device.physicalDevice,
+		glm::vec3(1.0f, 1.0f, -3.0f),
+		glm::vec3(1.0f)
+	);
+
 	createModel("models/head.obj", "textures/head.tga");
 	createMVPBuffer();
 	createDescriptorPool();
@@ -833,10 +841,9 @@ void VulkanRenderer::recordCommandBuffer(uint32_t imageIndex)
 	renderPassBeginInfo.renderArea.offset.y = 0;
 
 	VkClearValue colorClear = {};
-	colorClear.color = { 0.05f, 0.05f, 0.05f, 1.0f };
+	colorClear.color = { 0.01f, 0.01f, 0.01f, 1.0f };
 
 	VkClearValue depthClear = {};
-	depthClear.color = { 0.0, 0.0, 0.0, 1.0 };
 	depthClear.depthStencil = { 1.0, 0 };
 
 	std::array<VkClearValue, 2> clearValues = { colorClear, depthClear };
@@ -952,8 +959,8 @@ void VulkanRenderer::updateMVPBuffer()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 	
-	//mvp.model = glm::rotate(glm::mat4(1.0f), deltaTime * glm::radians(60.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	mvp.model = glm::mat4(1.0f);
+	mvp.model = glm::rotate(mvp.model, deltaTime * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	mvp.view = camera->getViewMatrix();
 	mvp.projection = glm::perspective(glm::radians(camera->getFOV()), swapchainExtent.width / (float)swapchainExtent.height, 0.1f, 10.f);
 	mvp.projection[1][1] *= -1;
@@ -961,7 +968,7 @@ void VulkanRenderer::updateMVPBuffer()
 	memcpy(mvpBufferMapped, &mvp, sizeof(MVP));
 }
 
-void VulkanRenderer::createTextureDescriptorSetLayout()
+void VulkanRenderer::createDescriptorSetLayout()
 {
 	VkDescriptorSetLayoutBinding mvpLayoutBinding = {};
 	mvpLayoutBinding.binding = 0;
@@ -977,7 +984,14 @@ void VulkanRenderer::createTextureDescriptorSetLayout()
 	textureLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	textureLayoutBinding.pImmutableSamplers = nullptr;
 
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { mvpLayoutBinding, textureLayoutBinding };
+	VkDescriptorSetLayoutBinding lightLayoutBinding = {};
+	lightLayoutBinding.binding = 2;
+	lightLayoutBinding.descriptorCount = 1;
+	lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	lightLayoutBinding.pImmutableSamplers = nullptr;
+
+	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { mvpLayoutBinding, textureLayoutBinding, lightLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -992,11 +1006,13 @@ void VulkanRenderer::createTextureDescriptorSetLayout()
 
 void VulkanRenderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 3> poolSizes = {};
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[2].descriptorCount = 1;
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
 	descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1033,7 +1049,12 @@ void VulkanRenderer::createDescriptorSet()
 	descriptorImageInfo.imageView = texture->getImageView();
 	descriptorImageInfo.sampler = texture->getSampler();
 
-	std::array<VkWriteDescriptorSet, 2> writeSets = {};
+	VkDescriptorBufferInfo lightDescriptorInfo = {};
+	lightDescriptorInfo.buffer = light->getBuffer();
+	lightDescriptorInfo.offset = 0;
+	lightDescriptorInfo.range = sizeof(Light::Properties);
+
+	std::array<VkWriteDescriptorSet, 3> writeSets = {};
 
 	writeSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeSets[0].dstSet = descriptorSet;
@@ -1050,6 +1071,14 @@ void VulkanRenderer::createDescriptorSet()
 	writeSets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	writeSets[1].descriptorCount = 1;
 	writeSets[1].pImageInfo = &descriptorImageInfo;
+
+	writeSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeSets[2].dstSet = descriptorSet;
+	writeSets[2].dstBinding = 2;
+	writeSets[2].dstArrayElement = 0;
+	writeSets[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writeSets[2].descriptorCount = 1;
+	writeSets[2].pBufferInfo = &lightDescriptorInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeSets.size()), writeSets.data(), 0, nullptr);
 }
@@ -1083,6 +1112,7 @@ void VulkanRenderer::cleanup()
 	/*
 		We have to destroy every object that we created using Vulkan (free memory).
 	*/
+	delete light;
 	delete camera;
 	delete texture;
 	delete model;
