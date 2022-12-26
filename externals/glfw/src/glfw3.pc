@@ -1,7 +1,7 @@
-prefix=C:/Program Files (x86)/CMakeExample
+prefix=C:/Program Files (x86)/VulkanLearning
 exec_prefix=${prefix}
-includedir=C:/Program Files (x86)/CMakeExample/include
-libdir=C:/Program Files (x86)/CMakeExample/lib
+includedir=C:/Program Files (x86)/VulkanLearning/include
+libdir=C:/Program Files (x86)/VulkanLearning/lib
 
 Name: GLFW
 Description: A multi-platform library for OpenGL, window and input

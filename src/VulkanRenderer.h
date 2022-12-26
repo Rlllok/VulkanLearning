@@ -14,6 +14,7 @@
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation",
+	"VK_LAYER_LUNARG_monitor"
 };
 
 const std::vector<const char*> deviceExtensions = {
@@ -37,6 +38,7 @@ public:
 private:
 
 	GLFWwindow* window;
+	std::string windowTitle;
 
 	Camera* camera;
 	
@@ -60,10 +62,10 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 	VkCommandPool commandPool;
-	VkCommandBuffer commandBuffer;
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
-	VkFence bufferFence;
+	std::vector<VkCommandBuffer> commandBuffers;
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> bufferFences;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSet descriptorSet;
@@ -111,6 +113,7 @@ private:
 	void loop();
 	void processInput(float deltaTime);
 	static void mouseCallback(GLFWwindow* window, double xpos, double ypos);
+	void fpsCounter(float deltaTime);
 
 	// Vulkan
 	void initVulkan();
@@ -131,7 +134,7 @@ private:
 	void createGraphicsPipeline();
 	void createCommandPool();
 	void createCommandBuffers();
-	void recordCommandBuffer(uint32_t imageIndex);
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void createSyncTools();
 	void createMVPBuffer();
 	void updateMVPBuffer();
