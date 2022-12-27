@@ -129,6 +129,16 @@ void VulkanRenderer::processInput(float deltaTime)
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
 		camera->move(Camera::LEFT, deltaTime);
 	}
+	static bool G_IS_PRESSED = false;
+	if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+		if (G_IS_PRESSED == false) {
+			gouraudMode = !gouraudMode;
+			G_IS_PRESSED = true;
+		}
+	}
+	if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE) {
+		G_IS_PRESSED = false;
+	}
 }
 
 void VulkanRenderer::mouseCallback(GLFWwindow* window, double xpos, double ypos)
@@ -320,8 +330,7 @@ void VulkanRenderer::createSwapchain()
 	VkSurfaceFormatKHR surfaceFormat = chooseSwapchainSurfaceFormat(swapchainSupportDetails.surfaceFormats);
 	//VkPresentModeKHR presentMode = chooseSwapchainPresentMode(swapchainSupportDetails.presentModes);
 	
-	// Changed to VK_PRESENT_MODE_FIFO_KHR, because it has no input latency. q
-	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
 	VkSwapchainCreateInfoKHR swapchainInfo = {};
 	swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -662,8 +671,8 @@ void VulkanRenderer::createGraphicsPipeline()
 	*/
 
 	// SHADERS
-	Shader vertShader(device, "shaders/triangle_vert.spv");
-	Shader fragShader(device, "shaders/triangle_frag.spv");
+	Shader vertShader(device, "shaders/phong_vert.spv");
+	Shader fragShader(device, "shaders/phong_frag.spv");
 
 	VkPipelineShaderStageCreateInfo vertStageInfo = {};
 	vertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -797,6 +806,37 @@ void VulkanRenderer::createGraphicsPipeline()
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("ERROR: cannot create Graphics Pipeline.");
 	}
+
+	Shader gouraudVertShader(device, "shaders/gouraud_vert.spv");
+	Shader gouraudFragShader(device, "shaders/gouraud_frag.spv");
+
+	VkPipelineShaderStageCreateInfo gouraudVertStageInfo = {};
+	gouraudVertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	gouraudVertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	gouraudVertStageInfo.module = gouraudVertShader.getShaderModule();
+	gouraudVertStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo gouraudFragStageInfo = {};
+	gouraudFragStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	gouraudFragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	gouraudFragStageInfo.module = gouraudFragShader.getShaderModule();
+	gouraudFragStageInfo.pName = "main";
+
+	std::vector<VkPipelineShaderStageCreateInfo> gouraudShaderStages = {
+		gouraudVertStageInfo, gouraudFragStageInfo
+	};
+
+	graphicsPipelineInfo.stageCount = static_cast<uint32_t>(gouraudShaderStages.size());
+	graphicsPipelineInfo.pStages = gouraudShaderStages.data();
+
+	result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &gouraudPipeline);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("ERROR: cannot create Graphics Pipeline.");
+	}
+}
+
+void VulkanRenderer::createGouraudPipeline()
+{
 }
 
 void VulkanRenderer::createCommandPool()
@@ -873,7 +913,14 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	renderPassBeginInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+	
+		if (gouraudMode) {
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gouraudPipeline);
+		}
+		else
+		{
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		}
 
 		VkBuffer vertexBuffers[] = {model->getVertexBuffer()};
 		VkDeviceSize offsets[] = {0};
@@ -1016,7 +1063,7 @@ void VulkanRenderer::createDescriptorSetLayout()
 	lightLayoutBinding.binding = 2;
 	lightLayoutBinding.descriptorCount = 1;
 	lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 	lightLayoutBinding.pImmutableSamplers = nullptr;
 
 	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { mvpLayoutBinding, textureLayoutBinding, lightLayoutBinding };
@@ -1167,6 +1214,7 @@ void VulkanRenderer::cleanup()
 
 	vkDestroyCommandPool(device, commandPool, nullptr);
 
+	vkDestroyPipeline(device, gouraudPipeline, nullptr);
 	vkDestroyPipeline(device, graphicsPipeline, nullptr);
 
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);

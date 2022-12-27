@@ -45,6 +45,7 @@ private:
 	Model* model = nullptr;
 	Texture* texture = nullptr;
 	Light* light = nullptr;
+	bool gouraudMode = false;
 	
 	VkResult result = VK_SUCCESS;
 	bool enableValidationLayers;
@@ -61,6 +62,7 @@ private:
 	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
+	VkPipeline gouraudPipeline;
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -132,6 +134,7 @@ private:
 	void createDescriptorPool();
 	void createDescriptorSet();
 	void createGraphicsPipeline();
+	void createGouraudPipeline();
 	void createCommandPool();
 	void createCommandBuffers();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
