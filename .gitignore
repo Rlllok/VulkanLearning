@@ -5,6 +5,7 @@ vcpkg_installed
 *.vcxproj.user
 *.sln
 .vs
+build
 
 cmake_install.cmake
 CMakeExample.dir

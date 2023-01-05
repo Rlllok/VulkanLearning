@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(VulkanLearning)
 
-file(GLOB_RECURSE SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/src/*.c
-        ${CMAKE_SOURCE_DIR}/src/*.cpp)
-
-file(GLOB_RECURSE HEADER_FILES
-        ${CMAKE_SOURCE_DIR}/src/*.h
-        ${CMAKE_SOURCE_DIR}/src/*.hpp)
-
 # Vulkan
 find_package(Vulkan REQUIRED)
 
@@ -27,7 +19,29 @@ include_directories(${CMAKE_SOURCE_DIR}/externals/stb)
 # tinyobjloader
 include_directories(${CMAKE_SOURCE_DIR}/externals/tinyobjloader)
 
-add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
-target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
-target_link_libraries(${PROJECT_NAME} glfw)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_compile_definitions(MODELS_DIR=\"${CMAKE_SOURCE_DIR}/models/\")
+add_compile_definitions(TEXTURES_DIR=\"${CMAKE_SOURCE_DIR}/textures/\")
+
+function(buildProject PROJECT_DIR NAME)
+
+    file(GLOB SOURCE_FILES
+            ${PROJECT_DIR}/src/*.c
+            ${PROJECT_DIR}/src/*.cpp)
+
+    file(GLOB HEADER_FILES
+            ${PROJECT_DIR}/src/*.h
+            ${PROJECT_DIR}/src/*.hpp)
+
+    file(GLOB SHADER_FILES
+            ${PROJECT_DIR}/shaders/*.spv)
+
+    file(COPY ${PROJECT_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+    add_executable(${NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
+    target_link_libraries(${NAME} Vulkan::Vulkan glfw)
+endfunction(buildProject)
+
+add_subdirectory(projects)

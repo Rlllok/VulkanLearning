@@ -1,0 +1,2 @@
+add_subdirectory(DeferredRenderingSubpasses)
+add_subdirectory(GouraudPhongShading)
