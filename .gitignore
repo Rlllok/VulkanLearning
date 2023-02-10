@@ -5,6 +5,7 @@ vcpkg_installed
 *.vcxproj.user
 *.sln
 .vs
+.vscode
 build
 
 cmake_install.cmake

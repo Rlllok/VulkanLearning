@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(VulkanLearning)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Vulkan
 find_package(Vulkan REQUIRED)
 
@@ -19,8 +22,9 @@ include_directories(${CMAKE_SOURCE_DIR}/externals/stb)
 # tinyobjloader
 include_directories(${CMAKE_SOURCE_DIR}/externals/tinyobjloader)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# my
+include_directories(${CMAKE_SOURCE_DIR}/core)
+add_subdirectory(core)
 
 add_compile_definitions(MODELS_DIR=\"${CMAKE_SOURCE_DIR}/models/\")
 add_compile_definitions(TEXTURES_DIR=\"${CMAKE_SOURCE_DIR}/textures/\")
@@ -39,9 +43,10 @@ function(buildProject PROJECT_DIR NAME)
             ${PROJECT_DIR}/shaders/*.spv)
 
     file(COPY ${PROJECT_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 
     add_executable(${NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
-    target_link_libraries(${NAME} Vulkan::Vulkan glfw)
+    target_link_libraries(${NAME} Vulkan::Vulkan glfw core)
 endfunction(buildProject)
 
 add_subdirectory(projects)
