@@ -1,7 +1,6 @@
 #include "device.h"
 #include "errorLog.h"
 #include "validation.h"
-#include "window.h"
 
 #include <vector>
 
@@ -72,6 +71,8 @@ void Device::createLogicalDevice(VkQueueFlags queueTypes)
 	if (result != VK_SUCCESS) {
 		error::log("cannot create Logical Device.");
 	}
+
+	vkGetDeviceQueue(logicalDevice, queueFamilyIndecies.graphicsFamily, 0, &graphicsQueue);
 }
 
 uint32_t Device::getQueueFamilyIndex(VkQueueFlags queueFlags)

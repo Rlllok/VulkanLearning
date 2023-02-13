@@ -11,7 +11,9 @@ int main()
 	TriangleRenderer renderer(true);
 
 	try {
-		renderer.start(windowWidth, windowHeight, "Triangle");
+		renderer.initWindow(windowWidth, windowHeight, "Triangle");
+		renderer.initVulkan();
+		renderer.startLoop();
 	}
 	catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;

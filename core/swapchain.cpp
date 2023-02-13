@@ -11,12 +11,13 @@ SwapChain::SwapChain(VkInstance instance, Device* device)
 
 SwapChain::~SwapChain()
 {
-    for (int i = 0; i < imageCount; i++) {
+    for (uint32_t i = 0; i < imageCount; i++) {
         vkDestroyImageView(device->getLogicalDevice(), imageViews[i], nullptr);
-        vkDestroyImage(device->getLogicalDevice(), images[i], nullptr);
     }
 
     vkDestroySwapchainKHR(device->getLogicalDevice(), swapchain, nullptr);
+
+    vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 
 void SwapChain::initSwapchain()
@@ -57,9 +58,26 @@ void SwapChain::initSwapchain()
     createImageViews();
 }
 
-void SwapChain::initSurface(Window* window)
+VkResult SwapChain::acquireNextImage(VkSemaphore semaphore, uint32_t *imageIndex)
 {
-    VkResult result = glfwCreateWindowSurface(instance, window->getWindow(), nullptr, &surface);
+    return vkAcquireNextImageKHR(
+        device->getLogicalDevice(),
+        swapchain,
+        UINT64_MAX,
+        semaphore,
+        nullptr,
+        imageIndex
+    );
+}
+
+VkFormat SwapChain::getImageFormat()
+{
+    return chooseSurfaceFormat().format;
+}
+
+void SwapChain::initSurface(GLFWwindow* window)
+{
+    VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &surface);
     if (result != VK_SUCCESS) {
         error::log("cannot create Surface.");
     }
@@ -114,7 +132,7 @@ VkPresentModeKHR SwapChain::choosePresentMode()
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D SwapChain::chooseExtent(Window* window)
+VkExtent2D SwapChain::chooseExtent(GLFWwindow* window)
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
@@ -123,11 +141,11 @@ VkExtent2D SwapChain::chooseExtent(Window* window)
 		int width;
 		int height;
 
-		glfwGetFramebufferSize(window->getWindow(), &width, &height);
+		glfwGetFramebufferSize(window, &width, &height);
 
 		VkExtent2D extent = {
 			static_cast<uint32_t>(width),
-			static_cast<uint32_t>(height),
+			static_cast<uint32_t>(height)
 		};
 
 		extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);

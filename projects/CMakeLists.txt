@@ -1,3 +1,3 @@
 add_subdirectory(triangle)
-add_subdirectory(DeferredRenderingSubpasses)
-add_subdirectory(GouraudPhongShading)
+# add_subdirectory(DeferredRenderingSubpasses)
+# add_subdirectory(GouraudPhongShading)

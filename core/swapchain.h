@@ -1,9 +1,9 @@
 #pragma once
 
 #include "device.h"
-#include "window.h"
 
-#include <vulkan/vulkan.h>
+#include "volk.h"
+#include <GLFW/glfw3.h>
 
 class SwapChain
 {
@@ -11,11 +11,18 @@ public:
     SwapChain(VkInstance instance, Device* device);
     ~SwapChain();
 
-    // Getters
-    uint32_t getImageCount() { return imageCount; }
+    operator VkSwapchainKHR() const { return swapchain; }
 
-    void initSurface(Window* window);
+    // Getters
+    uint32_t                    getImageCount()     { return imageCount; }
+    std::vector<VkImageView>    getImageViews()     { return imageViews; }
+    VkExtent2D                  getExtent()         { return swapchainExtent; }
+    VkFormat                    getImageFormat();
+
+    void initSurface(GLFWwindow* window);
     void initSwapchain();
+
+    VkResult acquireNextImage(VkSemaphore semaphore, uint32_t* imageIndex);
 
 private:
 
@@ -31,9 +38,9 @@ private:
     std::vector<VkImageView>        imageViews;
     uint32_t                        imageCount = 0;
 
-    void findSupportDetails();
-    VkSurfaceFormatKHR chooseSurfaceFormat();
-    VkPresentModeKHR choosePresentMode();
-    VkExtent2D chooseExtent(Window* Window);
-    void createImageViews();
+    void                findSupportDetails();
+    VkSurfaceFormatKHR  chooseSurfaceFormat();
+    VkPresentModeKHR    choosePresentMode();
+    VkExtent2D          chooseExtent(GLFWwindow* Window);
+    void                createImageViews();
 };

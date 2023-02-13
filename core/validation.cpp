@@ -1,8 +1,6 @@
 #include "validation.h"
 #include "errorLog.h"
 
-#include <vulkan/vulkan.h>
-
 #include <vector>
 #include <iostream>
 

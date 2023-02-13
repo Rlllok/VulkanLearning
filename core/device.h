@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 #include <vector>
 
@@ -19,8 +19,10 @@ public:
     ~Device();
 
     // Getters
-    VkDevice            getLogicalDevice()     { return logicalDevice; }
-    VkPhysicalDevice    getPhysicalDevice()    { return physicalDevice; }
+    VkDevice            getLogicalDevice()          { return logicalDevice; }
+    VkPhysicalDevice    getPhysicalDevice()         { return physicalDevice; }
+    uint32_t            getGraphicsFamilyIndex()    { return queueFamilyIndecies.graphicsFamily; }
+    VkQueue             getGraphicsQueue()          { return graphicsQueue; }
 
 private:
 
@@ -31,6 +33,7 @@ private:
     VkPhysicalDeviceMemoryProperties        memoryProperties;
     std::vector<VkQueueFamilyProperties>    queueFamilyProperties;
     QueueFamilyIndecies                     queueFamilyIndecies;
+    VkQueue                                 graphicsQueue;                                 
     VkDevice                                logicalDevice;
 
     void init();

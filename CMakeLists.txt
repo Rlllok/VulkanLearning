@@ -4,8 +4,10 @@ project(VulkanLearning)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Vulkan
-find_package(Vulkan REQUIRED)
+add_definitions(-DVK_NO_PROTOTYPES)
+
+# Volk
+add_subdirectory(${CMAKE_SOURCE_DIR}/externals/volk)
 
 # GLFW
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -46,7 +48,7 @@ function(buildProject PROJECT_DIR NAME)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 
     add_executable(${NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
-    target_link_libraries(${NAME} Vulkan::Vulkan glfw core)
+    target_link_libraries(${NAME} volk_headers glfw core)
 endfunction(buildProject)
 
 add_subdirectory(projects)
