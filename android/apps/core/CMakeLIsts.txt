@@ -1,0 +1,16 @@
+project("CoreLib")
+
+file(GLOB CORE_SRC "${CORE_DIR}/*.cpp")
+
+add_library(libcore STATIC ${CORE_SRC})
+
+include_directories(${CORE_DIR})
+include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
+
+target_link_libraries(
+    libcore
+    android
+    log
+    z
+    volk
+)

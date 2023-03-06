@@ -1,8 +1,23 @@
 #include "shader.h"
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+#include <android/asset_manager.h>
+#endif
+
 // std
 #include <fstream>
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+Shader::Shader(VkDevice device, std::string fileName, struct android_app* app)
+{
+	this->device = device;
+	this->fileName = fileName;
+	this->app = app;
+
+	readFileToBuffer();
+	createShaderModule();
+}
+#else
 Shader::Shader(VkDevice device, std::string fileName)
 {
 	this->device = device;
@@ -11,12 +26,24 @@ Shader::Shader(VkDevice device, std::string fileName)
 	readFileToBuffer();
 	createShaderModule();
 }
+#endif
 
 Shader::~Shader()
 {
 	vkDestroyShaderModule(device, shaderModule, nullptr);
 }
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+void Shader::readFileToBuffer()
+{
+	AAsset* asset = AAssetManager_open(app->activity->assetManager, fileName.c_str(), AASSET_MODE_STREAMING);
+	size_t fileSize = AAsset_getLength(asset);
+
+	buffer.resize(fileSize);
+	AAsset_read(asset, buffer.data(), fileSize);
+	AAsset_close(asset);
+}
+#else
 void Shader::readFileToBuffer()
 {
 	/*
@@ -37,6 +64,7 @@ void Shader::readFileToBuffer()
 
 	file.close();
 }
+#endif
 
 void Shader::createShaderModule()
 {

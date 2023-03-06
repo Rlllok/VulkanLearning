@@ -4,16 +4,25 @@
 #include "validation.h"
 #include "shader.h"
 
-#define VOLK_IMPLEMENTATION
-#include <volk.h>
-
 #include <array>
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+TriangleRenderer::TriangleRenderer(struct android_app* app, bool isDebug) {
+	this->app = app;
+	this->isDebug = isDebug;
+}
+#else
 TriangleRenderer::TriangleRenderer(bool isDebug)
 {
     this->isDebug = isDebug;
 }
+#endif
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+void TriangleRenderer::initWindow(ANativeWindow *window) {
+	this->window = window;
+}
+#else
 void TriangleRenderer::initWindow(uint32_t windowWidth, uint32_t windowHeight, std::string windowTitle)
 {
 	glfwInit();
@@ -27,6 +36,7 @@ void TriangleRenderer::initWindow(uint32_t windowWidth, uint32_t windowHeight, s
         error::log("cannot create GLFW window.");
     }
 }
+#endif
 
 void TriangleRenderer::draw()
 {
@@ -48,6 +58,7 @@ void TriangleRenderer::draw()
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
+	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &cmdBuffers[currentFrame];
 	submitInfo.signalSemaphoreCount = 1;
@@ -76,6 +87,24 @@ void TriangleRenderer::draw()
 	currentFrame = (currentFrame + 1) % swapchain->getImageCount();
 }
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+void TriangleRenderer::startLoop(struct android_app* app)
+{
+	int events;
+    android_poll_source *pSource;
+    do {
+        if (ALooper_pollAll(0, nullptr, &events, (void **) &pSource) >= 0) {
+            if (pSource) {
+                pSource->process(app, pSource);
+            }
+        }
+
+        if (isReady()) {
+            draw();
+        }
+    } while (!app->destroyRequested);
+}
+#else
 void TriangleRenderer::startLoop()
 {
 	while(!glfwWindowShouldClose(window))
@@ -85,6 +114,12 @@ void TriangleRenderer::startLoop()
     }
 
 	vkDeviceWaitIdle(device->getLogicalDevice());
+}
+#endif
+
+bool TriangleRenderer::isReady()
+{
+    return isInitialized;
 }
 
 TriangleRenderer::~TriangleRenderer()
@@ -114,16 +149,22 @@ TriangleRenderer::~TriangleRenderer()
 
 	vkDestroyInstance(instance, nullptr);
 
+#if !defined(VK_USE_PLATFORM_ANDROID_KHR)
 	glfwDestroyWindow(window);
     glfwTerminate();
+#endif
 }
 
-void TriangleRenderer::initVulkan()
-{
-	volkInitialize();
+void TriangleRenderer::initVulkan() {
+	VkResult result = volkInitialize();
+	if (result != VK_SUCCESS) {
+		error::log("cannot init volk.");
+	}
 
-    createInstance();
-	createDebugMessenger(instance, &debugMessenger);
+	createInstance();
+	if (isDebug) {
+		createDebugMessenger(instance, &debugMessenger);
+	}
 	createDevice();
 	createSwapchain();
 	createRenderPass();
@@ -132,6 +173,8 @@ void TriangleRenderer::initVulkan()
 	createCmdPool();
 	createCmdBuffers();
 	createSyncTools();
+
+	isInitialized = true;
 }
 
 void TriangleRenderer::createInstance()
@@ -151,7 +194,7 @@ void TriangleRenderer::createInstance()
 	VkInstanceCreateInfo instanceInfo = {};
 	instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instanceInfo.pApplicationInfo = &applicationInfo;
-	
+
 	VkDebugUtilsMessengerCreateInfoEXT messegerInfo = {};
 	if (isDebug) {
 		instanceInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -189,7 +232,7 @@ void TriangleRenderer::createDevice()
 	std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
 	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices.data());
 
-	VkPhysicalDevice physicalDevice;
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
 	for (const auto& currentDevice : physicalDevices) {
 		VkPhysicalDeviceProperties properties;
@@ -266,7 +309,7 @@ void TriangleRenderer::createRenderPass()
 void TriangleRenderer::createSwapchainFramebuffers()
 {
 	swapchainFramebuffers.resize(swapchain->getImageCount());
-	
+
 	std::vector<VkImageView> attachments = swapchain->getImageViews();
 
 	for (int i = 0; i < swapchainFramebuffers.size(); i++) {
@@ -291,8 +334,13 @@ void TriangleRenderer::createSwapchainFramebuffers()
 void TriangleRenderer::createGraphicsPipeline()
 {
 	// STAGES
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+	Shader vertShader(device->getLogicalDevice(), "shaders/triangle_vert.spv", app);
+	Shader fragShader(device->getLogicalDevice(), "shaders/triangle_frag.spv", app);
+#else
 	Shader vertShader(device->getLogicalDevice(), "shaders/triangle_vert.spv");
 	Shader fragShader(device->getLogicalDevice(), "shaders/triangle_frag.spv");
+#endif
 
 	VkPipelineShaderStageCreateInfo vertStageInfo = {};
 	vertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -310,7 +358,7 @@ void TriangleRenderer::createGraphicsPipeline()
 		vertStageInfo,
 		fragStageInfo
 	};
-	
+
 	// VERTEX INPUT STATE
 	VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
 	vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -464,7 +512,7 @@ void TriangleRenderer::recordCmdBuffer(VkCommandBuffer cmdBuffer, uint32_t image
 	}
 
 	VkClearValue clearValue = {};
-	clearValue.color = { 0.3, 0.1, 0.7, 1.0 };
+	clearValue.color = { 1, 1, 1, 1.0 };
 
 	VkRenderPassBeginInfo renderPassBeginInfo = {};
 	renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -523,10 +571,18 @@ void TriangleRenderer::createSyncTools()
 
 std::vector<const char *> TriangleRenderer::getRequiredExtensions()
 {
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+	std::vector<const char*> extensions;
+	extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	extensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+
+	return extensions;
+#else
 	uint32_t extensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&extensionCount);
 
 	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + extensionCount);
 
 	return extensions;
+#endif
 }

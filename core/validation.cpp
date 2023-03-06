@@ -30,9 +30,13 @@ bool checkValidationLayerSupport()
 	return true;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallackData, void* pUserData)
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-	std::cerr << "VL >> " << pCallackData->pMessage << std::endl;
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+	LOG_VL("%s\n", pCallbackData->pMessage);
+#else
+	std::cerr << "VL >> " << pCallbackData->pMessage << std::endl;
+#endif
 
 	return VK_FALSE;
 }

@@ -40,7 +40,11 @@ void SwapChain::initSwapchain()
     swapchainInfo.queueFamilyIndexCount = 0;
     swapchainInfo.pQueueFamilyIndices = nullptr;
     swapchainInfo.preTransform = capabilities.currentTransform;
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+    swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+#else
     swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#endif
     swapchainInfo.presentMode = choosePresentMode();
     swapchainInfo.clipped = VK_TRUE;
     swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
@@ -75,9 +79,21 @@ VkFormat SwapChain::getImageFormat()
     return chooseSurfaceFormat().format;
 }
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+void SwapChain::initSurface(ANativeWindow* window)
+#else
 void SwapChain::initSurface(GLFWwindow* window)
+#endif
 {
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+    VkAndroidSurfaceCreateInfoKHR surfaceInfo = {};
+    surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    surfaceInfo.window = window;
+
+    VkResult result = vkCreateAndroidSurfaceKHR(instance, &surfaceInfo, nullptr, &surface);
+#else
     VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &surface);
+#endif
     if (result != VK_SUCCESS) {
         error::log("cannot create Surface.");
     }
@@ -132,8 +148,15 @@ VkPresentModeKHR SwapChain::choosePresentMode()
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+VkExtent2D SwapChain::chooseExtent(ANativeWindow* window)
+#else
 VkExtent2D SwapChain::chooseExtent(GLFWwindow* window)
+#endif
 {
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+    return capabilities.currentExtent;
+#else
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	}
@@ -153,6 +176,7 @@ VkExtent2D SwapChain::chooseExtent(GLFWwindow* window)
 
 		return extent;
 	}
+#endif
 }
 
 void SwapChain::createImageViews()

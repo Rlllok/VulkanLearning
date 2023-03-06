@@ -12,7 +12,7 @@ Device::Device(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures enabled
 
 	vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	
+
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 	if (queueFamilyCount == 0)

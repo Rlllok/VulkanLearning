@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DVK_NO_PROTOTYPES)
 
 # Volk
+set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 add_subdirectory(${CMAKE_SOURCE_DIR}/externals/volk)
 
 # GLFW
@@ -48,7 +49,7 @@ function(buildProject PROJECT_DIR NAME)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 
     add_executable(${NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
-    target_link_libraries(${NAME} volk_headers glfw core)
+    target_link_libraries(${NAME} volk glfw core)
 endfunction(buildProject)
 
 add_subdirectory(projects)
