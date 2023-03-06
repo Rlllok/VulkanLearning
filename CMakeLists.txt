@@ -39,6 +39,7 @@ function(buildProject PROJECT_DIR NAME)
             ${PROJECT_DIR}/shaders/*.spv)
 
     file(COPY ${PROJECT_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 
     add_executable(${NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
     target_link_libraries(${NAME} Vulkan::Vulkan glfw)
