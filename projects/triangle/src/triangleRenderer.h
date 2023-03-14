@@ -1,5 +1,6 @@
 #pragma once
 
+#include "baseRenderer.h"
 #include <device.h>
 #include <swapchain.h>
 
@@ -15,8 +16,9 @@
 #endif
 
 #include <string>
+#include <vector>
 
-class TriangleRenderer
+class TriangleRenderer : public BaseRenderer
 {
 public:
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
@@ -25,54 +27,22 @@ public:
     TriangleRenderer(bool isDebug = false);
 #endif
     ~TriangleRenderer();
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    void initWindow(ANativeWindow* window);
-#else
-    void initWindow(uint32_t windowWidth, uint32_t windowHeight, std::string windowTitle);
-#endif
-    void initVulkan();
-    void draw();
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    void startLoop(struct android_app* app);
-#else
-    void startLoop();
-#endif
-    bool isReady();
+    
+    void prepareRenderer() override;
 
 private:
-    bool        isDebug = false;
-    bool        isInitialized = false;
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    ANativeWindow* window = nullptr;
-    struct android_app* app;
-#else
-    GLFWwindow*  window = nullptr;
-#endif
-
-    VkInstance                      instance = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT        debugMessenger;
-    Device*                         device = nullptr;
-    SwapChain*                      swapchain = nullptr;
-    VkRenderPass                    renderPass;
-    std::vector<VkFramebuffer>      swapchainFramebuffers;
-    VkPipelineLayout                graphicsPipelineLayout;
-    VkPipeline                      graphicsPipeline;
-    VkCommandPool                   cmdPool;
+    VkPipelineLayout                graphicsPipelineLayout = VK_NULL_HANDLE;
+    VkPipeline                      graphicsPipeline = VK_NULL_HANDLE;
+    VkCommandPool                   cmdPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer>    cmdBuffers;
     std::vector<VkSemaphore>        imageAvailableSemaphores;
     std::vector<VkSemaphore>        renderFinishedSemaphores;
     std::vector<VkFence>            bufferFences;
 
-    void createInstance();
-    void createDevice();
-    void createSwapchain();
-    void createRenderPass();
-    void createSwapchainFramebuffers();
+    void draw() override;
     void createGraphicsPipeline();
     void createCmdPool();
     void createCmdBuffers();
     void recordCmdBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
     void createSyncTools();
-
-    std::vector<const char*> getRequiredExtensions();
 };

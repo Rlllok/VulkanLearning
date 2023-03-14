@@ -1,5 +1,6 @@
 #include "triangleRenderer.h"
 
+#include "errorLog.h"
 // std
 #include <iostream>
 
@@ -12,6 +13,7 @@ void handleAppCmd(struct android_app* app, int32_t cmd) {
 			if (app->window != nullptr) {
 				renderer->initWindow(app->window);
 				renderer->initVulkan();
+				renderer->prepareRenderer();
 			}
 			break;
 		case APP_CMD_TERM_WINDOW:
@@ -26,8 +28,8 @@ void android_main(struct android_app* app)
 	auto triangleRenderer = new TriangleRenderer(app, true);
 	app->userData = triangleRenderer;
 	app->onAppCmd = handleAppCmd;
-	triangleRenderer->startLoop(app);
-	
+	triangleRenderer->startRenderLoop(app);
+
 	delete triangleRenderer;
 }
 #else
@@ -41,7 +43,8 @@ int main()
 	try {
 		renderer.initWindow(windowWidth, windowHeight, "Triangle");
 		renderer.initVulkan();
-		renderer.startLoop();
+		renderer.prepareRenderer();
+		renderer.startRenderLoop();
 	}
 	catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;
