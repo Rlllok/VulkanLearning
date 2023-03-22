@@ -40,9 +40,9 @@ void BaseRenderer::initWindow(uint32_t width, uint32_t height, std::string title
 
 BaseRenderer::~BaseRenderer()
 {
-	for (auto* framebuffer : swapchainFramebuffers) {
-		vkDestroyFramebuffer(device->getLogicalDevice(), framebuffer, nullptr);
-	}
+	// for (auto* framebuffer : swapchainFramebuffers) {
+	// 	vkDestroyFramebuffer(device->getLogicalDevice(), framebuffer, nullptr);
+	// }
 
 	vkDestroyRenderPass(device->getLogicalDevice(), renderPass, nullptr);
 
@@ -73,7 +73,7 @@ void BaseRenderer::prepareRenderer()
 {
 	createSwapchain();
 	createRenderPass();
-	createSwapchainFramebuffers();
+	// createSwapchainFramebuffers();
 }
 
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
