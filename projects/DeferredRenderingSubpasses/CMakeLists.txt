@@ -1,1 +1,0 @@
-buildProject(${CMAKE_CURRENT_SOURCE_DIR} DeferredRenderingSubpasses)
